@@ -21,11 +21,11 @@ export const products: Product[] = [
 ];
 
 export const categories = [
-  { name: 'Todos', label: 'Todo el menú', icon: '✨' },
-  { name: 'Almuerzos', label: 'Almuerzos Ejecutivos', icon: '🍲' },
-  { name: 'Pizzas', label: 'Pizzas Artesanales', icon: '🍕' },
-  { name: 'Carta', label: 'Platos a la Carta', icon: '🥩' },
-  { name: 'Sopas', label: 'Sopas & Caldos', icon: '🥣' },
-  { name: 'Cenas', label: 'Cenas & Antojitos', icon: '🌙' },
-  { name: 'Postres', label: 'Postres & Bebidas', icon: '🥤' },
+  { name: 'Todos', label: 'Todo el menú', icon: 'sparkles' },
+  { name: 'Almuerzos', label: 'Almuerzos Ejecutivos', icon: 'utensils' },
+  { name: 'Pizzas', label: 'Pizzas Artesanales', icon: 'pizza' },
+  { name: 'Carta', label: 'Platos a la Carta', icon: 'beef' },
+  { name: 'Sopas', label: 'Sopas & Caldos', icon: 'soup' },
+  { name: 'Cenas', label: 'Cenas & Antojitos', icon: 'moon' },
+  { name: 'Postres', label: 'Postres & Bebidas', icon: 'cup-soda' },
 ];
