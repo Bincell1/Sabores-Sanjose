@@ -9,6 +9,9 @@ export type Product = {
   emoji: string;
   image: string;
   featured?: boolean;
+  available?: boolean;
+  promotion?: string;
+  sizePrices?: Record<string, number>;
   options?: { label: string; values: string[] }[];
 };
 

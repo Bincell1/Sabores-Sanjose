@@ -1,15 +1,16 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Heart, Home, Menu, Phone } from 'lucide-react-native';
+import { Heart, Home, Menu, Phone, Settings2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export type NavTab = 'home' | 'favorites' | 'menu' | 'contact';
+export type NavTab = 'home' | 'favorites' | 'menu' | 'contact' | 'admin';
 
 const tabs: { key: NavTab; label: string; icon: typeof Home }[] = [
   { key: 'home', label: 'Home', icon: Home },
   { key: 'favorites', label: 'Favoritos', icon: Heart },
   { key: 'menu', label: 'Menú', icon: Menu },
   { key: 'contact', label: 'Contactar', icon: Phone },
+  { key: 'admin', label: 'Admin', icon: Settings2 },
 ];
 
 export function BottomNav({ activeTab, onChange }: { activeTab: NavTab; onChange: (tab: NavTab) => void }) {

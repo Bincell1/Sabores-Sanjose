@@ -1,6 +1,7 @@
 import './global.css';
 import React, { Component, ErrorInfo, useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, StatusBar, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, MapPin, Phone } from 'lucide-react-native';
 import { CartProvider, useCart } from './src/context/CartContext';
@@ -15,23 +16,27 @@ import { Image } from 'expo-image';
 import { FoodImage } from './src/components/FoodImage';
 import { MapEmbed } from './src/components/MapEmbed';
 import { BottomNav, NavTab } from './src/components/BottomNav';
+import { AdminPanel } from './src/components/AdminPanel';
 
 const MotiView = View as React.ComponentType<any>;
+const FAVORITES_STORAGE_KEY = '@sabores-san-jose/favorites';
 
-function Home({ activeTab, favorites, toggleFavorite, onNavigate }: { activeTab: NavTab; favorites: string[]; toggleFavorite: (id: string) => void; onNavigate: (tab: NavTab) => void }) {
+function Home({ activeTab, menuProducts, favorites, toggleFavorite, onNavigate, onSaveProduct, onDeleteProduct }: { activeTab: NavTab; menuProducts: Product[]; favorites: string[]; toggleFavorite: (id: string) => void; onNavigate: (tab: NavTab) => void; onSaveProduct: (product: Product) => void; onDeleteProduct: (id: string) => void }) {
   const [category, setCategory] = useState<Category>('Todos');
   const [selected, setSelected] = useState<Product | null>(null);
   const { addItem } = useCart();
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const featured = products.filter(product => product.featured || ['pollo-plancha', 'tres-leches', 'pizza-carnes'].includes(product.id));
+  const visibleProducts = menuProducts.filter(product => product.available !== false);
+  const featured = visibleProducts.filter(product => product.featured || ['pollo-plancha', 'tres-leches', 'pizza-carnes'].includes(product.id));
   useEffect(() => { const timer = setInterval(() => setCarouselIndex(index => (index + 1) % featured.length), 4800); return () => clearInterval(timer); }, [featured.length]);
-  const filtered = useMemo(() => activeTab === 'favorites' ? products.filter(product => favorites.includes(product.id)) : products.filter(product => category === 'Todos' || product.category === category), [activeTab, category, favorites]);
+  const filtered = useMemo(() => activeTab === 'favorites' ? visibleProducts.filter(product => favorites.includes(product.id)) : visibleProducts.filter(product => category === 'Todos' || product.category === category), [activeTab, category, favorites, visibleProducts]);
   const isContact = activeTab === 'contact';
+  const isAdmin = activeTab === 'admin';
 
   return <SafeAreaView edges={['top']} className="flex-1 bg-cream"><StatusBar barStyle="dark-content" /><View className="flex-1">
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 135 }}>
       <View className="px-5 pt-3"><View className="flex-row items-center justify-between"><View className="flex-row items-center"><Image source={require('./logo/logosisanjose.png')} contentFit="contain" className="mr-3 h-14 w-14" /><View><Text className="text-[13px] text-sand">¡Hola! Bienvenido a</Text><Text className="mt-0.5 text-[24px] font-extrabold text-cocoa">Sabores <Text className="text-terracotta">San José</Text></Text></View></View><IconButton icon={Bell} /></View>
-        {isContact ? <ContactContent /> : <>
+        {isAdmin ? <AdminPanel products={menuProducts} onSave={onSaveProduct} onDelete={onDeleteProduct} /> : isContact ? <ContactContent /> : <>
           {activeTab !== 'favorites' && <MotiView from={{ opacity: 0, translateY: 12 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 600 }} className="mt-5 overflow-hidden rounded-[26px] bg-cocoa"><Pressable onPress={() => setSelected(featured[carouselIndex])} className="relative h-[205px]"><FoodImage uri={featured[carouselIndex].image} emoji={featured[carouselIndex].emoji} className="absolute inset-0 opacity-70" /><View className="absolute inset-0 bg-[#24150F]/45" /><View className="absolute inset-x-0 bottom-0 p-5"><Text className="font-bold uppercase tracking-[2px] text-[#FFE2D5]">Favoritos de la casa</Text><Text className="mt-1 max-w-[260px] text-[23px] font-extrabold leading-7 text-white">{featured[carouselIndex].name}</Text><Text className="mt-1 max-w-[270px] text-sm text-[#FFE2D5]">{featured[carouselIndex].description}</Text></View></Pressable><View className="absolute bottom-4 right-5 flex-row gap-1.5">{featured.map((item, index) => <Pressable key={item.id} onPress={() => setCarouselIndex(index)} className={`h-2 rounded-full ${index === carouselIndex ? 'w-6 bg-white' : 'w-2 bg-white/50'}`} />)}</View></MotiView>}
           <View className="mt-6"><Text className="text-xl font-extrabold text-cocoa">{activeTab === 'favorites' ? 'Tus favoritos' : 'Explora el menú'}</Text>{activeTab !== 'favorites' && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingTop: 14, paddingBottom: 5 }}><View className="flex-row gap-2">{categories.map(item => <Pressable key={item.name} onPress={() => setCategory(item.name as Category)} className={`items-center rounded-2xl px-4 py-3 ${category === item.name ? 'bg-cocoa' : 'bg-white'}`}><Text className="text-2xl">{item.icon}</Text><Text className={`mt-1 max-w-[100px] text-center text-xs font-bold ${category === item.name ? 'text-white' : 'text-sand'}`}>{item.label ?? item.name}</Text></Pressable>)}</View></ScrollView>}</View>
           <View className="mt-5"><View className="mb-3 flex-row items-end justify-between"><Text className="text-xl font-extrabold text-cocoa">{activeTab === 'favorites' ? 'Guardados para después' : 'Recomendados'}</Text><Text className="text-sm font-bold text-terracotta">{filtered.length} opciones</Text></View><View className="flex-row flex-wrap justify-between">{filtered.map(product => <ProductCard key={product.id} product={product} onPress={() => setSelected(product)} isFavorite={favorites.includes(product.id)} onToggleFavorite={() => toggleFavorite(product.id)} />)}</View>{filtered.length === 0 && <View className="items-center rounded-[24px] bg-white px-5 py-10"><Text className="text-3xl">♡</Text><Text className="mt-3 text-center font-bold text-cocoa">Todavía no tienes favoritos</Text><Text className="mt-1 text-center text-sm text-sand">Toca el corazón de un platillo para guardarlo aquí.</Text><Pressable onPress={() => onNavigate('menu')} className="mt-4 rounded-full bg-terracotta px-5 py-3"><Text className="font-bold text-white">Ver menú</Text></Pressable></View>}</View>
@@ -58,8 +63,53 @@ function AppShell() {
   const [showIntro, setShowIntro] = useState(true);
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [menuProducts, setMenuProducts] = useState<Product[]>(products);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const [productsLoaded, setProductsLoaded] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(FAVORITES_STORAGE_KEY)
+      .then(value => {
+        if (value) {
+          const savedFavorites: unknown = JSON.parse(value);
+          if (Array.isArray(savedFavorites) && savedFavorites.every(item => typeof item === 'string')) {
+            setFavorites(savedFavorites);
+          }
+        }
+        setFavoritesLoaded(true);
+      })
+      .catch(error => {
+        console.warn('No se pudieron cargar los favoritos', error);
+        setFavoritesLoaded(true);
+      });
+  }, []);
+  useEffect(() => {
+    if (!favoritesLoaded) return;
+    AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites))
+      .catch(error => console.warn('No se pudieron guardar los favoritos', error));
+  }, [favorites, favoritesLoaded]);
+  useEffect(() => {
+    AsyncStorage.getItem('@sabores-san-jose/products')
+      .then(value => {
+        if (value) {
+          const savedProducts: unknown = JSON.parse(value);
+          if (Array.isArray(savedProducts)) setMenuProducts(savedProducts as Product[]);
+        }
+        setProductsLoaded(true);
+      })
+      .catch(error => {
+        console.warn('No se pudieron cargar los productos', error);
+        setProductsLoaded(true);
+      });
+  }, []);
+  useEffect(() => {
+    if (!productsLoaded) return;
+    AsyncStorage.setItem('@sabores-san-jose/products', JSON.stringify(menuProducts))
+      .catch(error => console.warn('No se pudieron guardar los productos', error));
+  }, [menuProducts, productsLoaded]);
+  const saveProduct = (product: Product) => setMenuProducts(current => current.some(item => item.id === product.id) ? current.map(item => item.id === product.id ? product : item) : [...current, product]);
+  const deleteProduct = (id: string) => setMenuProducts(current => current.filter(product => product.id !== id));
   const toggleFavorite = (id: string) => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
-  return showIntro ? <BrandIntro onFinish={() => setShowIntro(false)} /> : <View className="flex-1 bg-cream"><Home activeTab={activeTab} favorites={favorites} toggleFavorite={toggleFavorite} onNavigate={setActiveTab} /><BottomNav activeTab={activeTab} onChange={setActiveTab} /></View>;
+  return showIntro ? <BrandIntro onFinish={() => setShowIntro(false)} /> : <View className="flex-1 bg-cream"><Home activeTab={activeTab} menuProducts={menuProducts} favorites={favorites} toggleFavorite={toggleFavorite} onNavigate={setActiveTab} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} /><BottomNav activeTab={activeTab} onChange={setActiveTab} /></View>;
 }
 
 export default function App() { return <AppErrorBoundary><SafeAreaProvider><CartProvider><AppShell /></CartProvider></SafeAreaProvider></AppErrorBoundary>; }
