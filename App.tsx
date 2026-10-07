@@ -1,6 +1,6 @@
 import './global.css';
 import React, { Component, ErrorInfo, useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, StatusBar, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StatusBar, Text, View, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Beef, Bell, CupSoda, LucideIcon, MapPin, Moon, Phone, Pizza, Soup, Sparkles, Utensils } from 'lucide-react-native';
@@ -63,6 +63,7 @@ class AppErrorBoundary extends Component<{ children: React.ReactNode }, { error:
 
 function AppShell() {
   const [showIntro, setShowIntro] = useState(true);
+  const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [menuProducts, setMenuProducts] = useState<Product[]>(products);
@@ -111,7 +112,8 @@ function AppShell() {
   const saveProduct = (product: Product) => setMenuProducts(current => current.some(item => item.id === product.id) ? current.map(item => item.id === product.id ? product : item) : [...current, product]);
   const deleteProduct = (id: string) => setMenuProducts(current => current.filter(product => product.id !== id));
   const toggleFavorite = (id: string) => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
-  return showIntro ? <BrandIntro onFinish={() => setShowIntro(false)} /> : <View className="flex-1 bg-cream"><Home activeTab={activeTab} menuProducts={menuProducts} favorites={favorites} toggleFavorite={toggleFavorite} onNavigate={setActiveTab} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} /><BottomNav activeTab={activeTab} onChange={setActiveTab} /></View>;
+  const isDesktop = width >= 900;
+  return showIntro ? <BrandIntro onFinish={() => setShowIntro(false)} /> : <View className="flex-1 bg-cream" style={isDesktop ? { flexDirection: 'row' } : undefined}><Home activeTab={activeTab} menuProducts={menuProducts} favorites={favorites} toggleFavorite={toggleFavorite} onNavigate={setActiveTab} onSaveProduct={saveProduct} onDeleteProduct={deleteProduct} /><BottomNav activeTab={activeTab} onChange={setActiveTab} /></View>;
 }
 
 export default function App() { return <AppErrorBoundary><SafeAreaProvider><CartProvider><AppShell /></CartProvider></SafeAreaProvider></AppErrorBoundary>; }
