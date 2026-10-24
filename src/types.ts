@@ -1,4 +1,4 @@
-export type Category = 'Todos' | 'Almuerzos' | 'Pizzas' | 'Carta' | 'Sopas' | 'Cenas' | 'Postres';
+export type Category = 'Todos' | (string & {});
 
 export type Product = {
   id: string;
