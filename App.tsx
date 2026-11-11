@@ -58,7 +58,7 @@ function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => v
     if (!isSupabaseConfigured) return setError('Falta configurar la conexión con Supabase.');
     setLoading(true); setError('');
     const { user, error: signInError } = await signInAdmin(email.trim(), password);
-    if (signInError || !user) { setError('Correo o contraseña incorrectos.'); setLoading(false); return; }
+    if (signInError || !user) { console.error('Supabase sign-in error', signInError); setError(signInError?.message ? `Supabase: ${signInError.message}` : 'Supabase no devolvió una sesión.'); setLoading(false); return; }
     if (!(await isCurrentAdmin(user.id))) { signOutAdmin(); setError('Este usuario no tiene permisos de administrador.'); setLoading(false); return; }
     setLoading(false); onUnlock();
   };
