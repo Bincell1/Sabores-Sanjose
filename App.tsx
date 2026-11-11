@@ -22,7 +22,6 @@ import { deleteRemoteCategory, deleteRemoteProduct, exchangeRecoveryToken, isCur
 const MotiView = View as React.ComponentType<any>;
 const FAVORITES_STORAGE_KEY = '@sabores-san-jose/favorites';
 const CATEGORIES_STORAGE_KEY = '@sabores-san-jose/categories';
-const ADMIN_PIN = process.env.EXPO_PUBLIC_ADMIN_PIN ?? 'SJ2026';
 const categoryIcons: Record<string, LucideIcon> = { sparkles: Sparkles, utensils: Utensils, pizza: Pizza, beef: Beef, soup: Soup, moon: Moon, 'cup-soda': CupSoda };
 const productFromDb = (row: any): Product => ({ id: row.id, name: row.name, description: row.description, price: Number(row.price), category: row.category, emoji: row.emoji, image: row.image, featured: row.featured, available: row.available, promotion: row.promotion ?? '', sizePrices: row.size_prices ?? undefined, options: row.options ?? undefined });
 const productToDb = (product: Product) => ({ id: product.id, name: product.name, description: product.description, price: product.price, category: product.category, emoji: product.emoji, image: product.image, featured: product.featured ?? false, available: product.available !== false, promotion: product.promotion ?? null, size_prices: product.sizePrices ?? null, options: product.options ?? null, updated_at: new Date().toISOString() });
@@ -48,22 +47,12 @@ function PasswordRecovery({ onBack }: { onBack: () => void }) {
 }
 
 function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => void }) {
-  const [authMode, setAuthMode] = useState<'pin' | 'supabase'>('pin');
-  const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [forgot, setForgot] = useState(false);
   const [sent, setSent] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const submitPin = () => {
-    if (pin.trim() === ADMIN_PIN) {
-      onUnlock();
-    } else {
-      setError('PIN incorrecto.');
-    }
-  };
 
   const submitSupabase = async () => {
     if (!isSupabaseConfigured) return setError('Falta configurar la conexión con Supabase.');
@@ -85,38 +74,9 @@ function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => v
   return (
     <View className="mt-8 rounded-[26px] bg-white p-6">
       <Text className="text-2xl font-extrabold text-cocoa">{forgot ? 'Recuperar contraseña' : 'Acceso privado'}</Text>
-      <Text className="mt-2 text-sm leading-5 text-sand">{forgot ? 'Te enviaremos un enlace para crear una nueva contraseña.' : 'Ingresa con PIN o con tu cuenta de administrador.'}</Text>
+      <Text className="mt-2 text-sm leading-5 text-sand">{forgot ? 'Te enviaremos un enlace para crear una nueva contraseña.' : 'Ingresa con tu cuenta de administrador.'}</Text>
 
-      {!forgot && (
-        <View className="mt-5 flex-row rounded-2xl bg-[#FAF6F0] p-1">
-          <Pressable onPress={() => { setAuthMode('pin'); setError(''); }} className={`flex-1 items-center rounded-xl py-2.5 ${authMode === 'pin' ? 'bg-cocoa' : ''}`}>
-            <Text className={`text-xs font-bold ${authMode === 'pin' ? 'text-white' : 'text-cocoa'}`}>Entrar con PIN</Text>
-          </Pressable>
-          <Pressable onPress={() => { setAuthMode('supabase'); setError(''); }} className={`flex-1 items-center rounded-xl py-2.5 ${authMode === 'supabase' ? 'bg-cocoa' : ''}`}>
-            <Text className={`text-xs font-bold ${authMode === 'supabase' ? 'text-white' : 'text-cocoa'}`}>Cuenta Supabase</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {authMode === 'pin' && !forgot ? (
-        <>
-          <TextInput
-            value={pin}
-            onChangeText={value => { setPin(value); setError(''); }}
-            onSubmitEditing={submitPin}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholder="PIN de administrador (SJ2026)"
-            placeholderTextColor="#B3A397"
-            className="mt-4 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa"
-          />
-          {error ? <Text className="mt-2 text-sm font-bold text-terracotta">{error}</Text> : null}
-          <Pressable onPress={submitPin} className="mt-4 items-center rounded-2xl bg-cocoa px-4 py-4">
-            <Text className="font-bold text-white">Entrar</Text>
-          </Pressable>
-        </>
-      ) : (
-        <>
+      <>
           <TextInput
             value={email}
             onChangeText={value => { setEmail(value); setError(''); }}
@@ -149,7 +109,6 @@ function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => v
             </Pressable>
           )}
         </>
-      )}
 
       {forgot ? (
         <Pressable onPress={() => { setForgot(false); setError(''); setSent(''); }} className="mt-3 items-center px-4 py-3">
