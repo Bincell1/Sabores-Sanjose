@@ -5,6 +5,8 @@ import { FoodImage } from './FoodImage';
 import { Product } from '../types';
 
 type AdminCategory = { name: string; label: string; icon: string };
+const PIZZA_SIZES = ['8', '10', '12', '16'];
+const isPizza = (category: string) => category.trim().toLowerCase() === 'pizzas';
 
 export function AdminPanel({ products, categories, onSave, onDelete, onCreateCategory, onDeleteCategory, onLogout }: { products: Product[]; categories: AdminCategory[]; onSave: (product: Product) => void; onDelete: (id: string) => void; onCreateCategory: (name: string) => void; onDeleteCategory: (name: string) => void; onLogout: () => void }) {
   const [filter, setFilter] = useState('Todos');
@@ -12,14 +14,25 @@ export function AdminPanel({ products, categories, onSave, onDelete, onCreateCat
   const [editing, setEditing] = useState<Product | null>(null);
   const visible = useMemo(() => filter === 'Todos' ? products : products.filter(product => product.category === filter), [products, filter]);
   const createCategory = () => { const name = newCategory.trim().replace(/\s+/g, ' '); if (!name || name.toLowerCase() === 'todos' || categories.some(item => item.name.toLowerCase() === name.toLowerCase())) return; onCreateCategory(name); setNewCategory(''); };
-  const save = () => { if (!editing?.name.trim() || !editing.description.trim() || !editing.price || !editing.image.trim()) return; onSave({ ...editing, name: editing.name.trim(), description: editing.description.trim(), image: editing.image.trim(), price: Number(editing.price) }); setEditing(null); };
+  const save = () => {
+    if (!editing?.name.trim() || !editing.description.trim() || !editing.price || !editing.image.trim()) return;
+    const pizza = isPizza(editing.category);
+    const sizePrices = pizza ? Object.fromEntries(PIZZA_SIZES.filter(size => editing.sizePrices?.[size]).map(size => [size, Number(editing.sizePrices?.[size])])) : undefined;
+    const options = pizza
+      ? [{ label: 'Pedazos', values: PIZZA_SIZES }, ...(editing.options ?? []).filter(option => option.label !== 'Pedazos')]
+      : (editing.options ?? []).filter(option => option.label !== 'Pedazos');
+    onSave({ ...editing, name: editing.name.trim(), description: editing.description.trim(), image: editing.image.trim(), price: Number(editing.price), sizePrices, options: options.length ? options : undefined });
+    setEditing(null);
+  };
+  const chooseCategory = (category: string) => setEditing(current => current ? { ...current, category, ...(isPizza(category) ? { options: [{ label: 'Pedazos', values: PIZZA_SIZES }, ...(current.options ?? []).filter(option => option.label !== 'Pedazos')] } : { sizePrices: undefined, options: (current.options ?? []).filter(option => option.label !== 'Pedazos') }) } : current);
 
   if (editing) return <View className="mt-6 rounded-[26px] bg-white p-5">
     <View className="flex-row items-center justify-between"><Text className="text-2xl font-extrabold text-cocoa">Editar producto</Text><Pressable onPress={() => setEditing(null)} className="h-10 w-10 items-center justify-center rounded-full bg-[#F1E9DF]"><X size={19} color="#4A2810" /></Pressable></View>
     <Text className="mb-1 mt-5 text-sm font-bold text-cocoa">Nombre</Text><TextInput value={editing.name} onChangeText={name => setEditing({ ...editing, name })} className="rounded-2xl bg-[#FAF6F0] px-4 py-3 text-cocoa" />
     <Text className="mb-1 mt-4 text-sm font-bold text-cocoa">Descripción</Text><TextInput value={editing.description} onChangeText={description => setEditing({ ...editing, description })} multiline className="min-h-20 rounded-2xl bg-[#FAF6F0] px-4 py-3 text-cocoa" />
-    <Text className="mb-1 mt-4 text-sm font-bold text-cocoa">Precio (C$)</Text><TextInput value={String(editing.price || '')} onChangeText={price => setEditing({ ...editing, price: Number(price.replace(/[^0-9.]/g, '')) || 0 })} keyboardType="numeric" className="rounded-2xl bg-[#FAF6F0] px-4 py-3 text-cocoa" />
-    <Text className="mb-2 mt-4 text-sm font-bold text-cocoa">Categoría</Text><ScrollView horizontal><View className="flex-row gap-2">{categories.filter(item => item.name !== 'Todos').map(item => <Pressable key={item.name} onPress={() => setEditing({ ...editing, category: item.name })} className={`rounded-full px-4 py-2 ${editing.category === item.name ? 'bg-terracotta' : 'bg-[#F1E9DF]'}`}><Text className="font-bold text-cocoa">{item.label}</Text></Pressable>)}</View></ScrollView>
+    <Text className="mb-1 mt-4 text-sm font-bold text-cocoa">{isPizza(editing.category) ? 'Precio base (8 slices)' : 'Precio (C$)'}</Text><TextInput value={String(editing.price || '')} onChangeText={price => setEditing({ ...editing, price: Number(price.replace(/[^0-9.]/g, '')) || 0 })} keyboardType="numeric" className="rounded-2xl bg-[#FAF6F0] px-4 py-3 text-cocoa" />
+    <Text className="mb-2 mt-4 text-sm font-bold text-cocoa">Categoría</Text><ScrollView horizontal><View className="flex-row gap-2">{categories.filter(item => item.name !== 'Todos').map(item => <Pressable key={item.name} onPress={() => chooseCategory(item.name)} className={`rounded-full px-4 py-2 ${editing.category === item.name ? 'bg-terracotta' : 'bg-[#F1E9DF]'}`}><Text className="font-bold text-cocoa">{item.label}</Text></Pressable>)}</View></ScrollView>
+    {isPizza(editing.category) && <View className="mt-5 rounded-2xl bg-[#FFF6F0] p-4"><Text className="font-bold text-cocoa">Precios por porción</Text><Text className="mt-1 text-xs text-sand">Define cuánto cuesta esta pizza según la cantidad de slices.</Text><View className="mt-3 flex-row flex-wrap justify-between">{PIZZA_SIZES.map(size => <View key={size} className="mb-3 w-[48%]"><Text className="mb-1 text-xs font-bold text-cocoa">{size} slices (C$)</Text><TextInput value={editing.sizePrices?.[size] ? String(editing.sizePrices[size]) : ''} onChangeText={value => setEditing({ ...editing, sizePrices: { ...(editing.sizePrices ?? {}), [size]: Number(value.replace(/[^0-9.]/g, '')) || 0 } })} keyboardType="numeric" placeholder="Ej. 280" placeholderTextColor="#B5A69A" className="rounded-2xl bg-white px-4 py-3 text-cocoa" /></View>)}</View></View>}
     <Pressable onPress={() => setEditing({ ...editing, featured: !editing.featured })} className={`mt-5 flex-row items-center rounded-2xl border px-4 py-3 ${editing.featured ? 'border-terracotta bg-[#FCE9E2]' : 'border-[#E8DED3] bg-[#FAF6F0]'}`}><View className={`mr-3 h-6 w-6 items-center justify-center rounded-md border ${editing.featured ? 'border-terracotta bg-terracotta' : 'border-[#B5A69A] bg-white'}`}>{editing.featured && <Check size={16} color="white" strokeWidth={3} />}</View><View><Text className="font-bold text-cocoa">Favorito de la casa</Text><Text className="mt-0.5 text-xs text-sand">Mostrar este producto en la sección destacada</Text></View></Pressable>
     <Text className="mb-1 mt-4 text-sm font-bold text-cocoa">URL de imagen</Text><TextInput value={editing.image} onChangeText={image => setEditing({ ...editing, image })} autoCapitalize="none" className="rounded-2xl bg-[#FAF6F0] px-4 py-3 text-cocoa" />
     <Pressable onPress={save} className="mt-6 flex-row items-center justify-center rounded-2xl bg-terracotta px-5 py-4"><Save size={18} color="white" /><Text className="ml-2 font-bold text-white">Guardar cambios</Text></Pressable>
