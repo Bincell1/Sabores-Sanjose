@@ -1,4 +1,4 @@
-export type Category = 'Todos' | (string & {});
+export type Category = string;
 
 export type Product = {
   id: string;
