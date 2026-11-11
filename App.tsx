@@ -22,6 +22,7 @@ import { deleteRemoteCategory, deleteRemoteProduct, exchangeRecoveryToken, isCur
 const MotiView = View as React.ComponentType<any>;
 const FAVORITES_STORAGE_KEY = '@sabores-san-jose/favorites';
 const CATEGORIES_STORAGE_KEY = '@sabores-san-jose/categories';
+const ADMIN_PIN = process.env.EXPO_PUBLIC_ADMIN_PIN ?? 'SJ2026';
 const categoryIcons: Record<string, LucideIcon> = { sparkles: Sparkles, utensils: Utensils, pizza: Pizza, beef: Beef, soup: Soup, moon: Moon, 'cup-soda': CupSoda };
 const productFromDb = (row: any): Product => ({ id: row.id, name: row.name, description: row.description, price: Number(row.price), category: row.category, emoji: row.emoji, image: row.image, featured: row.featured, available: row.available, promotion: row.promotion ?? '', sizePrices: row.size_prices ?? undefined, options: row.options ?? undefined });
 const productToDb = (product: Product) => ({ id: product.id, name: product.name, description: product.description, price: product.price, category: product.category, emoji: product.emoji, image: product.image, featured: product.featured ?? false, available: product.available !== false, promotion: product.promotion ?? null, size_prices: product.sizePrices ?? null, options: product.options ?? null, updated_at: new Date().toISOString() });
@@ -47,13 +48,24 @@ function PasswordRecovery({ onBack }: { onBack: () => void }) {
 }
 
 function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => void }) {
+  const [authMode, setAuthMode] = useState<'pin' | 'supabase'>('pin');
+  const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [forgot, setForgot] = useState(false);
   const [sent, setSent] = useState('');
   const [loading, setLoading] = useState(false);
-  const submit = async () => {
+
+  const submitPin = () => {
+    if (pin.trim() === ADMIN_PIN) {
+      onUnlock();
+    } else {
+      setError('PIN incorrecto.');
+    }
+  };
+
+  const submitSupabase = async () => {
     if (!isSupabaseConfigured) return setError('Falta configurar la conexión con Supabase.');
     setLoading(true); setError('');
     const { user, error: signInError } = await signInAdmin(email.trim(), password);
@@ -61,8 +73,95 @@ function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => v
     if (!(await isCurrentAdmin(user.id))) { signOutAdmin(); setError('Este usuario no tiene permisos de administrador.'); setLoading(false); return; }
     setLoading(false); onUnlock();
   };
-  const recover = async () => { if (!isSupabaseConfigured || !email.trim()) return setError('Escribe tu correo de administrador.'); const redirectTo = typeof window !== 'undefined' ? window.location.origin : 'https://saboressanjose.netlify.app'; const result = await requestPasswordReset(email.trim(), redirectTo); if (result.error) setError('No se pudo enviar el correo.'); else { setError(''); setSent('Revisa tu correo y abre el enlace más reciente.'); } };
-  return <View className="mt-8 rounded-[26px] bg-white p-6"><Text className="text-2xl font-extrabold text-cocoa">{forgot ? 'Recuperar contraseña' : 'Acceso privado'}</Text><Text className="mt-2 text-sm leading-5 text-sand">{forgot ? 'Te enviaremos un enlace para crear una nueva contraseña.' : 'Ingresa con tu cuenta de administrador.'}</Text><TextInput value={email} onChangeText={value => { setEmail(value); setError(''); }} autoCapitalize="none" keyboardType="email-address" placeholder="Correo electrónico" placeholderTextColor="#B3A397" className="mt-6 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa" />{!forgot && <TextInput value={password} onChangeText={value => { setPassword(value); setError(''); }} onSubmitEditing={submit} secureTextEntry autoCapitalize="none" placeholder="Contraseña" placeholderTextColor="#B3A397" className="mt-3 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa" />}{error ? <Text className="mt-2 text-sm font-bold text-terracotta">{error}</Text> : null}{sent ? <Text className="mt-2 text-sm font-bold text-[#31834B]">{sent}</Text> : null}<Pressable disabled={loading} onPress={forgot ? recover : submit} className="mt-4 items-center rounded-2xl bg-cocoa px-4 py-4"><Text className="font-bold text-white">{forgot ? 'Enviar enlace' : loading ? 'Verificando...' : 'Entrar'}</Text></Pressable>{!forgot && <Pressable onPress={() => { setForgot(true); setError(''); }} className="mt-3 items-center px-4 py-3"><Text className="font-bold text-terracotta">¿Olvidaste tu contraseña?</Text></Pressable>}<Pressable onPress={onBack} className="mt-3 items-center px-4 py-3"><Text className="font-bold text-sand">Volver a Inicio</Text></Pressable></View>;
+
+  const recover = async () => {
+    if (!isSupabaseConfigured || !email.trim()) return setError('Escribe tu correo de administrador.');
+    const redirectTo = typeof window !== 'undefined' ? window.location.origin : 'https://saboressanjose.netlify.app';
+    const result = await requestPasswordReset(email.trim(), redirectTo);
+    if (result.error) setError('No se pudo enviar el correo.');
+    else { setError(''); setSent('Revisa tu correo y abre el enlace más reciente.'); }
+  };
+
+  return (
+    <View className="mt-8 rounded-[26px] bg-white p-6">
+      <Text className="text-2xl font-extrabold text-cocoa">{forgot ? 'Recuperar contraseña' : 'Acceso privado'}</Text>
+      <Text className="mt-2 text-sm leading-5 text-sand">{forgot ? 'Te enviaremos un enlace para crear una nueva contraseña.' : 'Ingresa con PIN o con tu cuenta de administrador.'}</Text>
+
+      {!forgot && (
+        <View className="mt-5 flex-row rounded-2xl bg-[#FAF6F0] p-1">
+          <Pressable onPress={() => { setAuthMode('pin'); setError(''); }} className={`flex-1 items-center rounded-xl py-2.5 ${authMode === 'pin' ? 'bg-cocoa' : ''}`}>
+            <Text className={`text-xs font-bold ${authMode === 'pin' ? 'text-white' : 'text-cocoa'}`}>Entrar con PIN</Text>
+          </Pressable>
+          <Pressable onPress={() => { setAuthMode('supabase'); setError(''); }} className={`flex-1 items-center rounded-xl py-2.5 ${authMode === 'supabase' ? 'bg-cocoa' : ''}`}>
+            <Text className={`text-xs font-bold ${authMode === 'supabase' ? 'text-white' : 'text-cocoa'}`}>Cuenta Supabase</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {authMode === 'pin' && !forgot ? (
+        <>
+          <TextInput
+            value={pin}
+            onChangeText={value => { setPin(value); setError(''); }}
+            onSubmitEditing={submitPin}
+            secureTextEntry
+            autoCapitalize="none"
+            placeholder="PIN de administrador (SJ2026)"
+            placeholderTextColor="#B3A397"
+            className="mt-4 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa"
+          />
+          {error ? <Text className="mt-2 text-sm font-bold text-terracotta">{error}</Text> : null}
+          <Pressable onPress={submitPin} className="mt-4 items-center rounded-2xl bg-cocoa px-4 py-4">
+            <Text className="font-bold text-white">Entrar</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <TextInput
+            value={email}
+            onChangeText={value => { setEmail(value); setError(''); }}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="Correo electrónico"
+            placeholderTextColor="#B3A397"
+            className="mt-4 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa"
+          />
+          {!forgot && (
+            <TextInput
+              value={password}
+              onChangeText={value => { setPassword(value); setError(''); }}
+              onSubmitEditing={submitSupabase}
+              secureTextEntry
+              autoCapitalize="none"
+              placeholder="Contraseña"
+              placeholderTextColor="#B3A397"
+              className="mt-3 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa"
+            />
+          )}
+          {error ? <Text className="mt-2 text-sm font-bold text-terracotta">{error}</Text> : null}
+          {sent ? <Text className="mt-2 text-sm font-bold text-[#31834B]">{sent}</Text> : null}
+          <Pressable disabled={loading} onPress={forgot ? recover : submitSupabase} className="mt-4 items-center rounded-2xl bg-cocoa px-4 py-4">
+            <Text className="font-bold text-white">{forgot ? 'Enviar enlace' : loading ? 'Verificando...' : 'Entrar'}</Text>
+          </Pressable>
+          {!forgot && (
+            <Pressable onPress={() => { setForgot(true); setError(''); }} className="mt-3 items-center px-4 py-3">
+              <Text className="font-bold text-terracotta">¿Olvidaste tu contraseña?</Text>
+            </Pressable>
+          )}
+        </>
+      )}
+
+      {forgot ? (
+        <Pressable onPress={() => { setForgot(false); setError(''); setSent(''); }} className="mt-3 items-center px-4 py-3">
+          <Text className="font-bold text-sand">Volver al inicio de sesión</Text>
+        </Pressable>
+      ) : null}
+
+      <Pressable onPress={onBack} className="mt-2 items-center px-4 py-3">
+        <Text className="font-bold text-sand">Volver a Inicio</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 function Home({ activeTab, menuProducts, menuCategories, favorites, toggleFavorite, onNavigate, onSaveProduct, onDeleteProduct, onCreateCategory, onDeleteCategory, adminAuthenticated, onAdminUnlock, onAdminLogout }: { activeTab: NavTab; menuProducts: Product[]; menuCategories: typeof categories; favorites: string[]; toggleFavorite: (id: string) => void; onNavigate: (tab: NavTab) => void; onSaveProduct: (product: Product) => void; onDeleteProduct: (id: string) => void; onCreateCategory: (name: string) => void; onDeleteCategory: (name: string) => void; adminAuthenticated: boolean; onAdminUnlock: () => void; onAdminLogout: () => void }) {
