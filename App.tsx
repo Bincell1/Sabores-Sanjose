@@ -17,7 +17,7 @@ import { FoodImage } from './src/components/FoodImage';
 import { MapEmbed } from './src/components/MapEmbed';
 import { BottomNav, NavTab } from './src/components/BottomNav';
 import { AdminPanel } from './src/components/AdminPanel';
-import { deleteRemoteCategory, deleteRemoteProduct, isCurrentAdmin, isSupabaseConfigured, loadRemoteData, requestPasswordReset, saveRemoteCategory, saveRemoteProduct, setRecoveryToken, signInAdmin, signOutAdmin, updateAdminPassword } from './src/lib/supabase';
+import { deleteRemoteCategory, deleteRemoteProduct, exchangeRecoveryToken, isCurrentAdmin, isSupabaseConfigured, loadRemoteData, requestPasswordReset, saveRemoteCategory, saveRemoteProduct, setRecoveryToken, signInAdmin, signOutAdmin, updateAdminPassword } from './src/lib/supabase';
 
 const MotiView = View as React.ComponentType<any>;
 const FAVORITES_STORAGE_KEY = '@sabores-san-jose/favorites';
@@ -31,14 +31,19 @@ function PasswordRecovery({ onBack }: { onBack: () => void }) {
   const [confirmation, setConfirmation] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const save = async () => {
+    if (!ready || loading) return;
     if (password.length < 8 || password !== confirmation) { setError(password.length < 8 ? 'Usa al menos 8 caracteres.' : 'Las contraseñas no coinciden.'); return; }
+    setLoading(true); setError('');
     const result = await updateAdminPassword(password);
-    if (result.error) { setError('El enlace expiró. Solicita otro correo de recuperación.'); return; }
+    setLoading(false);
+    if (result.error) { setError(`No se pudo guardar: ${result.error.message ?? 'el enlace expiró'}. Solicita otro correo de recuperación.`); return; }
     setError(''); setMessage('Contraseña actualizada correctamente.');
   };
-  useEffect(() => { if (typeof window === 'undefined') return; const params = new URLSearchParams(window.location.hash.slice(1)); const token = params.get('access_token'); const errorCode = params.get('error_code'); if (token) setRecoveryToken(token); if (errorCode) setError('El enlace expiró o ya fue utilizado. Solicita uno nuevo.'); }, []);
-  return <View className="mt-8 rounded-[26px] bg-white p-6"><Text className="text-2xl font-extrabold text-cocoa">Cambiar contraseña</Text><Text className="mt-2 text-sm leading-5 text-sand">Escribe una nueva contraseña para tu cuenta de administrador.</Text><TextInput value={password} onChangeText={value => { setPassword(value); setError(''); }} secureTextEntry autoCapitalize="none" placeholder="Nueva contraseña" placeholderTextColor="#B3A397" className="mt-6 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa" /><TextInput value={confirmation} onChangeText={value => { setConfirmation(value); setError(''); }} secureTextEntry autoCapitalize="none" placeholder="Repite la contraseña" placeholderTextColor="#B3A397" className="mt-3 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa" />{error ? <Text className="mt-2 text-sm font-bold text-terracotta">{error}</Text> : null}{message ? <Text className="mt-2 text-sm font-bold text-[#31834B]">{message}</Text> : null}<Pressable onPress={save} className="mt-4 items-center rounded-2xl bg-cocoa px-4 py-4"><Text className="font-bold text-white">Guardar contraseña</Text></Pressable><Pressable onPress={onBack} className="mt-3 items-center px-4 py-3"><Text className="font-bold text-sand">Volver</Text></Pressable></View>;
+  useEffect(() => { let active = true; const prepare = async () => { if (typeof window === 'undefined') return; const hash = new URLSearchParams(window.location.hash.slice(1)); const query = new URLSearchParams(window.location.search); const token = hash.get('access_token'); const tokenHash = query.get('token_hash'); const errorCode = hash.get('error_code') || query.get('error_code'); if (token) setRecoveryToken(token); else if (tokenHash) await exchangeRecoveryToken(tokenHash); if (active) { setReady(Boolean(token || tokenHash) && !errorCode); if (errorCode) setError('El enlace expiró o ya fue utilizado. Solicita uno nuevo.'); } }; void prepare(); return () => { active = false; }; }, []);
+  return <View className="mt-8 rounded-[26px] bg-white p-6"><Text className="text-2xl font-extrabold text-cocoa">Cambiar contraseña</Text><Text className="mt-2 text-sm leading-5 text-sand">Escribe una nueva contraseña para tu cuenta de administrador.</Text>{!ready && !error ? <Text className="mt-4 text-sm font-bold text-sand">Preparando el enlace seguro…</Text> : null}<TextInput editable={ready && !loading} value={password} onChangeText={value => { setPassword(value); setError(''); }} secureTextEntry autoCapitalize="none" placeholder="Nueva contraseña" placeholderTextColor="#B3A397" className="mt-6 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa" /><TextInput editable={ready && !loading} value={confirmation} onChangeText={value => { setConfirmation(value); setError(''); }} secureTextEntry autoCapitalize="none" placeholder="Repite la contraseña" placeholderTextColor="#B3A397" className="mt-3 rounded-2xl bg-[#FAF6F0] px-4 py-4 text-cocoa" />{error ? <Text className="mt-2 text-sm font-bold text-terracotta">{error}</Text> : null}{message ? <Text className="mt-2 text-sm font-bold text-[#31834B]">{message}</Text> : null}<Pressable disabled={!ready || loading || Boolean(message)} onPress={save} className="mt-4 items-center rounded-2xl bg-cocoa px-4 py-4"><Text className="font-bold text-white">{loading ? 'Guardando…' : 'Guardar contraseña'}</Text></Pressable><Pressable onPress={onBack} className="mt-3 items-center px-4 py-3"><Text className="font-bold text-sand">Volver</Text></Pressable></View>;
 }
 
 function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => void }) {

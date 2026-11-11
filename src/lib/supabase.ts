@@ -26,6 +26,11 @@ export const signInAdmin = async (email: string, password: string) => {
 };
 export const signOutAdmin = () => { accessToken = ''; };
 export const setRecoveryToken = (token: string) => { accessToken = token; };
+export const exchangeRecoveryToken = async (tokenHash: string) => {
+  const result = await authRequest(`verify?type=recovery&token=${encodeURIComponent(tokenHash)}`, 'GET');
+  if (result.data?.access_token) accessToken = result.data.access_token;
+  return result;
+};
 export const updateAdminPassword = (password: string) => authRequest('user', 'PUT', { password });
 export const requestPasswordReset = (email: string, redirectTo: string) => authRequest('recover', 'POST', { email, redirect_to: redirectTo });
 export const isCurrentAdmin = async (userId: string) => { const result = await request('admin_users', 'GET', `?select=user_id&user_id=eq.${encodeURIComponent(userId)}`); return !result.error && Array.isArray(result.data) && result.data.length > 0; };
