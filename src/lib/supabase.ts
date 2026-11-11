@@ -2,7 +2,11 @@ const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
 let accessToken = '';
 
-const authHeaders = () => ({ apikey: key ?? '', Authorization: `Bearer ${accessToken || (key ?? '')}`, 'Content-Type': 'application/json' });
+const authHeaders = () => {
+  const headers: Record<string, string> = { apikey: key ?? '', 'Content-Type': 'application/json' };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return headers;
+};
 const request = async (table: string, method: string, query = '', body?: unknown) => {
   const response = await fetch(`${url}/rest/v1/${table}${query}`, { method, headers: { ...authHeaders(), Prefer: method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal' }, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await response.text();
