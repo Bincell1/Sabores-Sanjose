@@ -25,8 +25,10 @@ export const signInAdmin = async (email: string, password: string) => {
   const response = await fetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ email, password }) });
   const data = await response.json();
   if (!response.ok) return { user: null, error: data };
+  if (!data.access_token) return { user: null, error: { message: 'Supabase respondió sin access_token.' } };
   accessToken = data.access_token;
-  return { user: data.user, error: null };
+  const userResult = data.user ? { data: data.user, error: null } : await authRequest('user', 'GET');
+  return { user: userResult.data, error: userResult.error };
 };
 export const signOutAdmin = () => { accessToken = ''; };
 export const setRecoveryToken = (token: string) => { accessToken = token; };
