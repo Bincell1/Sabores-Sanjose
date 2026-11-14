@@ -123,7 +123,7 @@ function AdminGate({ onUnlock, onBack }: { onUnlock: () => void; onBack: () => v
   );
 }
 
-function Home({ activeTab, menuProducts, menuCategories, favorites, toggleFavorite, onNavigate, onSaveProduct, onDeleteProduct, onCreateCategory, onDeleteCategory, adminAuthenticated, onAdminUnlock, onAdminLogout }: { activeTab: NavTab; menuProducts: Product[]; menuCategories: typeof categories; favorites: string[]; toggleFavorite: (id: string) => void; onNavigate: (tab: NavTab) => void; onSaveProduct: (product: Product) => void; onDeleteProduct: (id: string) => void; onCreateCategory: (name: string) => void; onDeleteCategory: (name: string) => void; adminAuthenticated: boolean; onAdminUnlock: () => void; onAdminLogout: () => void }) {
+function Home({ activeTab, menuProducts, menuCategories, favorites, toggleFavorite, onNavigate, onSaveProduct, onDeleteProduct, onCreateCategory, onDeleteCategory, adminAuthenticated, onAdminUnlock, onAdminLogout }: { activeTab: NavTab; menuProducts: Product[]; menuCategories: typeof categories; favorites: string[]; toggleFavorite: (id: string) => void; onNavigate: (tab: NavTab) => void; onSaveProduct: (product: Product) => void; onDeleteProduct: (id: string) => void; onCreateCategory: (name: string, icon: string) => void; onDeleteCategory: (name: string) => void; adminAuthenticated: boolean; onAdminUnlock: () => void; onAdminLogout: () => void }) {
   const [category, setCategory] = useState<Category>('Todos');
   const [selected, setSelected] = useState<Product | null>(null);
   const { addItem } = useCart();
@@ -174,11 +174,42 @@ function AppShell() {
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    loadRemoteData().then(([productsResult, categoriesResult]) => {
-      if (!productsResult.error && productsResult.data?.length) setMenuProducts(current => { const merged = new Map(current.map(product => [product.id, product])); productsResult.data.forEach((row: any) => merged.set(row.id, productFromDb(row))); return Array.from(merged.values()); });
-      if (!categoriesResult.error && categoriesResult.data?.length) setMenuCategories([{ name: 'Todos', label: 'Todo el menú', icon: 'sparkles' }, ...categoriesResult.data.filter((item: any) => item.name !== 'Todos')]);
-    }).catch(error => console.warn('No se pudieron cargar los datos de Supabase', error));
+    // Cuando Supabase está configurado, es la fuente compartida de verdad.
+    // No mezclamos ni cargamos la copia local en paralelo: esa copia pertenece
+    // a cada dispositivo y podía devolver productos que ya fueron borrados.
+    if (isSupabaseConfigured) {
+      loadRemoteData().then(([productsResult, categoriesResult]) => {
+        if (!productsResult.error && Array.isArray(productsResult.data)) {
+          setMenuProducts(productsResult.data.map((row: any) => productFromDb(row)));
+        }
+        if (!categoriesResult.error && Array.isArray(categoriesResult.data)) {
+          setMenuCategories([
+            { name: 'Todos', label: 'Todo el menú', icon: 'sparkles' },
+            ...categoriesResult.data
+              .filter((item: any) => item.name !== 'Todos')
+              .map((item: any) => ({ name: item.name, label: item.label ?? item.name, icon: item.icon ?? 'sparkles' })),
+          ]);
+        }
+        setProductsLoaded(true);
+      }).catch(error => {
+        console.warn('No se pudieron cargar los datos de Supabase', error);
+        setProductsLoaded(true);
+      });
+      return;
+    }
+
+    AsyncStorage.getItem('@sabores-san-jose/products')
+      .then(value => {
+        if (value) {
+          const savedProducts: unknown = JSON.parse(value);
+          if (Array.isArray(savedProducts)) setMenuProducts(savedProducts as Product[]);
+        }
+        setProductsLoaded(true);
+      })
+      .catch(error => {
+        console.warn('No se pudieron cargar los productos', error);
+        setProductsLoaded(true);
+      });
   }, []);
   useEffect(() => {
     AsyncStorage.getItem(FAVORITES_STORAGE_KEY)
@@ -202,25 +233,12 @@ function AppShell() {
       .catch(error => console.warn('No se pudieron guardar los favoritos', error));
   }, [favorites, favoritesLoaded]);
   useEffect(() => {
-    AsyncStorage.getItem('@sabores-san-jose/products')
-      .then(value => {
-        if (value) {
-          const savedProducts: unknown = JSON.parse(value);
-          if (Array.isArray(savedProducts)) setMenuProducts(savedProducts as Product[]);
-        }
-        setProductsLoaded(true);
-      })
-      .catch(error => {
-        console.warn('No se pudieron cargar los productos', error);
-        setProductsLoaded(true);
-      });
-  }, []);
-  useEffect(() => {
-    if (!productsLoaded) return;
+    if (!productsLoaded || isSupabaseConfigured) return;
     AsyncStorage.setItem('@sabores-san-jose/products', JSON.stringify(menuProducts))
       .catch(error => console.warn('No se pudieron guardar los productos', error));
   }, [menuProducts, productsLoaded]);
   useEffect(() => {
+    if (isSupabaseConfigured) return;
     AsyncStorage.getItem(CATEGORIES_STORAGE_KEY).then(value => {
       if (value) {
         const saved = JSON.parse(value);
@@ -228,10 +246,10 @@ function AppShell() {
       }
     }).catch(error => console.warn('No se pudieron cargar las categorías', error));
   }, []);
-  useEffect(() => { AsyncStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(menuCategories)).catch(error => console.warn('No se pudieron guardar las categorías', error)); }, [menuCategories]);
+  useEffect(() => { if (!isSupabaseConfigured) AsyncStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(menuCategories)).catch(error => console.warn('No se pudieron guardar las categorías', error)); }, [menuCategories]);
   const saveProduct = (product: Product) => { setMenuProducts(current => current.some(item => item.id === product.id) ? current.map(item => item.id === product.id ? product : item) : [...current, product]); void saveRemoteProduct(productToDb(product)); };
   const deleteProduct = (id: string) => { setMenuProducts(current => current.filter(product => product.id !== id)); void deleteRemoteProduct(id); };
-  const createCategory = (name: string) => { const category = { name, label: name, icon: 'sparkles' }; setMenuCategories(current => [...current, category]); void saveRemoteCategory(category); };
+  const createCategory = (name: string, icon: string) => { const category = { name, label: name, icon }; setMenuCategories(current => [...current, category]); void saveRemoteCategory(category); };
   const deleteCategory = (name: string) => { if (menuProducts.some(product => product.category === name)) return; setMenuCategories(current => current.filter(category => category.name !== name)); void deleteRemoteCategory(name); };
   const toggleFavorite = (id: string) => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const isDesktop = width >= 900;
