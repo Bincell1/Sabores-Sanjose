@@ -24,6 +24,8 @@ const FAVORITES_STORAGE_KEY = '@sabores-san-jose/favorites';
 const CATEGORIES_STORAGE_KEY = '@sabores-san-jose/categories';
 const NOTIFICATIONS_READ_STORAGE_KEY = '@sabores-san-jose/notifications-read';
 const categoryIcons: Record<string, LucideIcon> = { sparkles: Sparkles, utensils: Utensils, pizza: Pizza, beef: Beef, soup: Soup, moon: Moon, 'cup-soda': CupSoda };
+const defaultPizzaCategory = { name: 'Pizzas', label: 'Pizzas Artesanales', icon: '🍕' };
+const ensurePizzaCategory = <T extends { name: string }>(items: T[]) => items.some(item => item.name.toLowerCase().includes('pizza')) ? items : [...items, defaultPizzaCategory as unknown as T];
 const renderCategoryIcon = (icon: string, size: number, color: string) => {
   const CategoryIcon = categoryIcons[icon];
   return CategoryIcon ? <CategoryIcon size={size} color={color} strokeWidth={2.2} /> : <Text style={{ fontSize: size + 3 }}>{icon || '🍽️'}</Text>;
@@ -206,9 +208,9 @@ function AppShell() {
         if (!categoriesResult.error && Array.isArray(categoriesResult.data)) {
           setMenuCategories([
             { name: 'Todos', label: 'Todo el menú', icon: 'sparkles' },
-            ...categoriesResult.data
+            ...ensurePizzaCategory(categoriesResult.data
               .filter((item: any) => item.name !== 'Todos')
-              .map((item: any) => ({ name: item.name, label: item.label ?? item.name, icon: item.icon ?? 'sparkles' })),
+              .map((item: any) => ({ name: item.name, label: item.label ?? item.name, icon: item.icon ?? 'sparkles' }))),
           ]);
         }
         setProductsLoaded(true);
@@ -261,9 +263,9 @@ function AppShell() {
   useEffect(() => {
     if (isSupabaseConfigured) return;
     AsyncStorage.getItem(CATEGORIES_STORAGE_KEY).then(value => {
-      if (value) {
+        if (value) {
         const saved = JSON.parse(value);
-        if (Array.isArray(saved) && saved.some(item => item?.name === 'Todos')) setMenuCategories(saved);
+          if (Array.isArray(saved) && saved.some(item => item?.name === 'Todos')) setMenuCategories(ensurePizzaCategory(saved));
       }
     }).catch(error => console.warn('No se pudieron cargar las categorías', error));
   }, []);
@@ -284,7 +286,7 @@ function AppShell() {
     }
     menuProducts.filter(product => product.category === oldName).forEach(product => void saveRemoteProduct(productToDb({ ...product, category: name as Product['category'] })));
   };
-  const deleteCategory = (name: string) => { if (menuProducts.some(product => product.category === name)) return; setMenuCategories(current => current.filter(category => category.name !== name)); void deleteRemoteCategory(name); };
+  const deleteCategory = (name: string) => { if (name.toLowerCase().includes('pizza') || menuProducts.some(product => product.category === name)) return; setMenuCategories(current => current.filter(category => category.name !== name)); void deleteRemoteCategory(name); };
   const toggleFavorite = (id: string) => setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const isDesktop = width >= 900;
   const navigate = (tab: NavTab) => { setActiveTab(tab); if (tab !== 'admin') setAdminAuthenticated(false); };
