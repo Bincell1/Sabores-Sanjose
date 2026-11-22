@@ -197,6 +197,18 @@ function AppShell() {
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = 'es-NI';
+    document.documentElement.setAttribute('data-currency', 'NIO');
+    const description = 'Menú de Sabores San José, Nicaragua. Precios en córdobas nicaragüenses (NIO).';
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'description'); document.head.appendChild(meta); }
+    meta.setAttribute('content', description);
+    let ogDescription = document.querySelector('meta[property="og:description"]');
+    if (!ogDescription) { ogDescription = document.createElement('meta'); ogDescription.setAttribute('property', 'og:description'); document.head.appendChild(ogDescription); }
+    ogDescription.setAttribute('content', description);
+  }, []);
+  useEffect(() => {
     // Cuando Supabase está configurado, es la fuente compartida de verdad.
     // No mezclamos ni cargamos la copia local en paralelo: esa copia pertenece
     // a cada dispositivo y podía devolver productos que ya fueron borrados.

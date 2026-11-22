@@ -26,7 +26,12 @@
       "package": "com.sabores.sanjose"
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "name": "Sabores San José",
+      "shortName": "Sabores San José",
+      "lang": "es-NI",
+      "dir": "ltr",
+      "description": "Menú de Sabores San José, Nicaragua. Precios expresados en córdobas nicaragüenses (NIO)."
     },
     "plugins": [
       "expo-asset"
