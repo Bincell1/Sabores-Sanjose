@@ -9,17 +9,29 @@ const PHONE = '50577756100';
 const CATEGORY_EMOJIS: Record<string, string> = {
   Almuerzos: '🍛',
   Pizzas: '🍕',
-  Carta: '🍽️',
+  Carta: '🥩',
   Sopas: '🥣',
-  Cenas: '🌙',
+  Cenas: '🍗',
   Postres: '🍰',
+};
+
+const categoryEmoji = (category: string, productName: string) => {
+  const normalizedCategory = category.toLowerCase();
+  const normalizedName = productName.toLowerCase();
+  if (normalizedCategory.includes('pizza')) return '🍕';
+  if (normalizedCategory.includes('sopa') || normalizedCategory.includes('caldo')) return '🥣';
+  if (normalizedCategory.includes('postre') || normalizedCategory.includes('bebida')) return '🍰';
+  if (normalizedCategory.includes('almuerzo') || normalizedCategory.includes('desayuno')) return '🍛';
+  if (normalizedCategory.includes('cena') || normalizedCategory.includes('antojito') || normalizedName.includes('búfalo') || normalizedName.includes('buffalo')) return '🍗';
+  if (normalizedCategory.includes('carta')) return '🥩';
+  return CATEGORY_EMOJIS[category] ?? '🍽️';
 };
 
 export function CartBar({ bottom = 78 }: { bottom?: number }) {
   const { items, count, total, removeItem, clear } = useCart();
   const [showItems, setShowItems] = useState(false);
   if (!count) return null;
-  const itemEmoji = (item: typeof items[number]) => item.emoji && item.emoji !== '🍽️' ? item.emoji : CATEGORY_EMOJIS[item.category] ?? '🍽️';
+  const itemEmoji = (item: typeof items[number]) => categoryEmoji(item.category, item.name);
   const selectedEmojis = Array.from(new Set(items.map(itemEmoji))).slice(0, 3);
   const order = items.map(item => `- ${item.quantity}x ${item.name} (${formatCordobas(item.price)})`).join('\n');
   const message = `*¡Hola Sabores San José!* 👋\nQuiero hacer el siguiente pedido:\n${order}\n💵 *Forma de Pago:* Efectivo`;
