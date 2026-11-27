@@ -169,7 +169,7 @@ function Home({ activeTab, menuProducts, menuCategories, favorites, toggleFavori
         </>}
       </View>
     </ScrollView><CartBar bottom={12} />
-    <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(options, notes) => { if (selected) addItem(selected, options, notes); setSelected(null); }} />
+    <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(options) => { if (selected) addItem(selected, options); setSelected(null); }} />
   </View></SafeAreaView>;
 }
 

@@ -16,7 +16,7 @@ Para Android o iOS: `npm run android` o `npm run ios`.
 - `App.tsx`: pantalla principal y composición de la experiencia.
 - `src/data/products.ts`: catálogo, categorías y URLs de imágenes.
 - `src/context/CartContext.tsx`: estado del carrito.
-- `src/components/ProductModal.tsx`: opciones, extras y notas.
+- `src/components/ProductModal.tsx`: opciones y extras.
 - `src/components/CartBar.tsx`: resumen y checkout por WhatsApp.
 
 Antes de publicar, reemplaza `PHONE` en `src/components/CartBar.tsx` por el número real de WhatsApp del restaurante.
