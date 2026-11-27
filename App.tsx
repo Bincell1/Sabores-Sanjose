@@ -168,7 +168,7 @@ function Home({ activeTab, menuProducts, menuCategories, favorites, toggleFavori
           {activeTab === 'home' && <View className="mt-7 mb-2 rounded-[24px] bg-white p-5"><Text className="text-lg font-extrabold text-cocoa">Visítanos o escríbenos</Text><Text className="mt-1 text-sm text-sand">Estamos listos para preparar algo especial para ti.</Text><Pressable onPress={() => Linking.openURL('tel:77756100')} className="mt-4 flex-row items-center rounded-2xl bg-[#F1E9DF] px-3 py-3"><Phone size={17} color="#C85A32" /><Text className="ml-2 text-sm font-bold text-cocoa">77756100</Text></Pressable><Text className="mt-5 text-lg font-extrabold text-cocoa">Ubicación del negocio</Text><Text className="mt-1 text-sm text-sand">Consulta el mapa directamente dentro de la app.</Text><MapEmbed /></View>}
         </>}
       </View>
-    </ScrollView><CartBar bottom={12} />
+    </ScrollView><CartBar bottom={12} sectionEmojis={Object.fromEntries(menuCategories.map(category => [category.name, category.icon]))} />
     <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(options) => { if (selected) addItem(selected, options); setSelected(null); }} />
   </View></SafeAreaView>;
 }

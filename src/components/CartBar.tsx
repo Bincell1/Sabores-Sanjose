@@ -14,8 +14,11 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   Cenas: '🍗',
   Postres: '🍰',
 };
+const ICON_NAMES = new Set(['sparkles', 'utensils', 'pizza', 'beef', 'soup', 'moon', 'cup-soda']);
 
-const categoryEmoji = (category: string, productName: string) => {
+const categoryEmoji = (category: string, productName: string, sectionEmojis: Record<string, string>) => {
+  const configuredEmoji = sectionEmojis[category]?.trim();
+  if (configuredEmoji && !ICON_NAMES.has(configuredEmoji)) return configuredEmoji;
   const normalizedCategory = category.toLowerCase();
   const normalizedName = productName.toLowerCase();
   if (normalizedCategory.includes('pizza')) return '🍕';
@@ -27,11 +30,11 @@ const categoryEmoji = (category: string, productName: string) => {
   return CATEGORY_EMOJIS[category] ?? '🍽️';
 };
 
-export function CartBar({ bottom = 78 }: { bottom?: number }) {
+export function CartBar({ bottom = 78, sectionEmojis = {} }: { bottom?: number; sectionEmojis?: Record<string, string> }) {
   const { items, count, total, removeItem, clear } = useCart();
   const [showItems, setShowItems] = useState(false);
   if (!count) return null;
-  const itemEmoji = (item: typeof items[number]) => categoryEmoji(item.category, item.name);
+  const itemEmoji = (item: typeof items[number]) => categoryEmoji(item.category, item.name, sectionEmojis);
   const selectedEmojis = Array.from(new Set(items.map(itemEmoji))).slice(0, 3);
   const order = items.map(item => `- ${item.quantity}x ${item.name} (${formatCordobas(item.price)})`).join('\n');
   const message = `*¡Hola Sabores San José!* 👋\nQuiero hacer el siguiente pedido:\n${order}\n💵 *Forma de Pago:* Efectivo`;
