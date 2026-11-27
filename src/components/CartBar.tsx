@@ -34,7 +34,7 @@ export function CartBar({ bottom = 78, sectionEmojis = {} }: { bottom?: number; 
   const { items, count, total, removeItem, clear } = useCart();
   const [showItems, setShowItems] = useState(false);
   if (!count) return null;
-  const itemEmoji = (item: typeof items[number]) => categoryEmoji(item.category, item.name, sectionEmojis);
+  const itemEmoji = (item: typeof items[number]) => item.sectionEmoji && !ICON_NAMES.has(item.sectionEmoji) ? item.sectionEmoji : categoryEmoji(item.category, item.name, sectionEmojis);
   const selectedEmojis = Array.from(new Set(items.map(itemEmoji))).slice(0, 3);
   const order = items.map(item => `- ${item.quantity}x ${item.name} (${formatCordobas(item.price)})`).join('\n');
   const message = `*¡Hola Sabores San José!* 👋\nQuiero hacer el siguiente pedido:\n${order}\n💵 *Forma de Pago:* Efectivo`;

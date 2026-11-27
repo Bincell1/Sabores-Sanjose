@@ -169,7 +169,7 @@ function Home({ activeTab, menuProducts, menuCategories, favorites, toggleFavori
         </>}
       </View>
     </ScrollView><CartBar bottom={12} sectionEmojis={Object.fromEntries(menuCategories.map(category => [category.name, category.icon]))} />
-    <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(options) => { if (selected) addItem(selected, options); setSelected(null); }} />
+    <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={(options) => { if (selected) addItem(selected, options, menuCategories.find(category => category.name === selected.category)?.icon); setSelected(null); }} />
   </View></SafeAreaView>;
 }
 

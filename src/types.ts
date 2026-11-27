@@ -15,4 +15,4 @@ export type Product = {
   options?: { label: string; values: string[] }[];
 };
 
-export type CartItem = Product & { quantity: number; selectedOptions: Record<string, string> };
+export type CartItem = Product & { quantity: number; selectedOptions: Record<string, string>; sectionEmoji?: string };
